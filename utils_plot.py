@@ -4,6 +4,34 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import utils
 
+def plot_hist_subplots(dataframe, bins, title, x_label, pathfig):
+    '''
+    INPUTS
+        dataframe    : pd dataframeframe
+    '''
+    n = len(dataframe.columns)
+    fig, ax = plt.subplots(1, n, 
+                        tight_layout=True, sharex=True, sharey=True,    
+                        figsize=[10,4])
+    # create horizontal boxplot for each dataset
+    colors = plt.cm.rainbow(np.linspace(0, 1, n))
+    for i, col in enumerate(dataframe.columns):
+        # calculate and normalize histogram
+        hist, bin_centers, width = utils.calc_hist(dataframe.iloc[:,i], bins)
+        hist_norm = hist / np.sum(hist * width)
+        # plot histogram
+        ax[i].bar(bin_centers, hist_norm, width=width, color=colors[i],
+                  label=f"Mean: {np.round(np.mean(dataframe.iloc[:,i]), 2)}")
+        ax[i].set_xlabel(x_label)
+        ax[i].set_title(col)
+        ax[i].legend(loc='upper right')
+    ax[0].set_ylabel('Density')
+    fig.suptitle(title, fontsize=14)
+    # save figure
+    plt.savefig(pathfig, dpi=500, bbox_inches='tight')
+    plt.close()
+    return
+
 def plot_moving_avg(x_data, y_data, win_list, x_label, y_label, title, pathfig):
     '''
     '''
@@ -16,11 +44,10 @@ def plot_moving_avg(x_data, y_data, win_list, x_label, y_label, title, pathfig):
     for i, win in enumerate(win_list):
         # calculate moving avg
         y_model = pd.DataFrame(index=x_data, data=y_data)
-        y_model = y_model.rolling(window=win, center=True).mean()
-        #idx = [np.arange(i-win, i+win, 1)%len(y_data) for i, y in enumerate(y_data)]
-        #y_model = [np.mean(y_data[i]) for i in idx]
-
-        # plot model with rmse in legend    
+        y_model = y_model.rolling(window=win, 
+                                  center=True,          # center window in data
+                                  min_periods=1).mean()        # shorten window at edges
+                                  #win_type=).mean() 
         ax.plot(x_data, y_model,
                 '-', color=colors[i], 
                 label=f"{win} m window")
@@ -35,7 +62,6 @@ def plot_moving_avg(x_data, y_data, win_list, x_label, y_label, title, pathfig):
     return
 
 
-
 def plot_polyfit(x_data, y_data, deg_list, x_label, y_label, title, pathfig):
     '''
     '''
@@ -43,7 +69,6 @@ def plot_polyfit(x_data, y_data, deg_list, x_label, y_label, title, pathfig):
     fig, ax = plt.subplots(1, 1, tight_layout=True)
     # plot raw data points
     ax.plot(x_data, y_data, 'k.')
-
     colors = plt.cm.rainbow(np.linspace(0,1,len(deg_list)))
     for deg in deg_list:
         # fit polynomial to data and calculated rmse

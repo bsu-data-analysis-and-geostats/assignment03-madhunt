@@ -2,6 +2,35 @@
 import numpy as np
 import pandas as pd
 
+def moving_avg_weighted(x_data, y_data, x_eval, win):
+    '''
+    Uses a weighted moving average (non-parametric smooth) to smooth a 
+    dataset of one variable.
+    INPUTS
+        x_data  : np array, size nx1    : Independent variable
+        y_data  : np array, size nx1    : Dependent variable
+        x_eval  : np array, size mx1    : Locations to evaluate model
+        win     : int                   : Window size (half of window)
+    RETURNS
+        y_model : np array, size mx1    : Non-parametric smooth estimates
+    '''
+    # initialize model values
+    y_model = np.full(shape=np.shape(x_eval), fill_value=np.nan)
+
+    for i in range(len(x_eval)):
+        # calculate location between point and all other data points
+        dist = np.sqrt( (x_data - x_eval[i])**2 )
+        # find points within window size
+        idx = np.where(dist < win)
+        # there are at least some data points
+        if len(idx) > 0:
+            # define weights as bi-squared kernel 
+            weights = 15/16 * (1 - (dist[idx] / win)**2 )**2
+            # calculate estimate for point i
+            y_model[i] = np.sum(weights * y_data[idx]) / np.sum(weights)
+    return y_model
+
+
 def polyfit_rmse(x_train, y_train, x_test, y_test, deg):
     # find polynomial
     p = np.polyfit(x_train, y_train, deg=deg)

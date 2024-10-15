@@ -8,76 +8,97 @@ import utils
 import utils_plot
 
 
-def main(debug):
+def main():
 
-    #TODO remove debug flag
-    # load in data
+    # (0) load in data
     path_home = os.path.dirname(os.path.realpath(__file__))
     path_figures = os.path.join(path_home, 'figures')
     data = np.loadtxt(os.path.join(path_home, "icevelocity.txt"))
 
-    if debug == False:
-        # (1) fit polynomials deg 0-4 to data and plot
-        deg_list = np.arange(0, 5, 1)
-        utils_plot.plot_polyfit(data[:,0], data[:,1], deg_list, 
-                     'Depth [$m$]', 'Velocity [$m/yr$]', 
-                     'Glacier Velocity vs Depth, with Polynomial Models',
-                      os.path.join(path_figures, "q1_polynomial_fits.png"))
+    # (1) fit polynomials deg 0-4 to data and plot
+    deg_list = np.arange(0, 5, 1)
+    utils_plot.plot_polyfit(data[:,0], data[:,1], deg_list, 
+                    'Depth [$m$]', 'Velocity [$m/yr$]', 
+                    'Glacier Velocity vs Depth, with Polynomial Models',
+                    os.path.join(path_figures, "q1_polynomial_fits.png"))
 
-        # (2) monte carlo with 90% of the data
-        n_samp = int(np.ceil(0.9 * len(data)))
-        mc_stats = utils.monte_carlo_polyfit(data, n_samp=n_samp, n_iters=1000, deg_list=deg_list)
-        # format output dataframe for plotting
-        mc_stats = format_mc_stats(mc_stats)
-        # plot dataframe as table
-        utils_plot.plot_df_as_table(mc_stats, 
-                                    title="Model Parameters for Monte Carlo Sampling of 90\\% of Data", 
-                                    pathfig=os.path.join(path_figures, "q2_param_table.png"))
+    # (2) monte carlo with 90% of the data
+    n_samp = int(np.ceil(0.9 * len(data)))
+    mc_stats = utils.monte_carlo_polyfit(data, n_samp=n_samp, n_iters=1000, deg_list=deg_list)
+    # format output dataframe for plotting
+    mc_stats = format_mc_stats(mc_stats)
+    # plot dataframe as table
+    utils_plot.plot_df_as_table(mc_stats, 
+                                title="Model Parameters for Monte Carlo Sampling of 90\\% of Data", 
+                                pathfig=os.path.join(path_figures, "q2_param_table.png"))
 
-    elif debug == True:
-        #### (3) cross-validation with 90% of data
-        ###rmse_vals = cross_validataion_rmse(data, 
-        ###                                perc_train=0.9, 
-        ###                                n_iters=1000, 
-        ###                                deg_list=deg_list)
-        #### plot distribution of RMSE vals for each degree
+    # (3) cross-validation with 90% of data
+    rmse_vals = cross_validataion_rmse(data, 
+                                       perc_train=0.9, 
+                                       n_iters=1000, 
+                                       deg_list=deg_list)
+    # plot distribution of RMSE vals for each degree
+    utils_plot.plot_hist_subplots(rmse_vals, bins=10, 
+                                  title="Cross-Validataion: Distribution of RMSE Values for Polynomial Models", 
+                                  x_label="RMSE", 
+                                  pathfig=os.path.join(path_figures, "q3_rmse_dist.png"))
+    
+    # (4) use a moving window average to model the data
+    win_list = [3, 10, 50]
+    #TODO CHECK ME
+    utils_plot.plot_moving_avg(data[:,0], data[:,1], win_list, 
+                                'Depth [$m$]', 'Velocity [$m/yr$]', 
+                                'Unweighted Moving Average, Velocity vs Depth',
+                                os.path.join(path_figures, "q4_moving_avg.png"))
+    
+    # (5) use a weighted moving window average to model the data
+    xlabel = "Depth [$m$]"
+    ylabel = "Velocity [$m/yr$]"
+    title = "Weighted Moving Average, Velocity vs Depth"
+    pathfig = os.path.join(path_figures, "q5_weighted_moving_avg.png")
+    x_eval = np.arange(0, np.max(data[:,0]), 0.5)
+    #mov_avg_weighted = pd.DataFrame(index=x_eval,
+                                    #columns=[f"Window {win}" for win in win_list])
+    # initialize figure
+    fig, ax = plt.subplots(1, 1, tight_layout=True)
+    ax.plot(data[:,0], data[:,1], 'k.')
+    colors = plt.cm.rainbow(np.linspace(0, 1, len(win_list)))
+    # loop through different windows
+    for i, win in enumerate(win_list):
+        y_model = utils.moving_avg_weighted(data[:,0], data[:,1],
+                                            x_eval=x_eval, win=win)
+        # plot model
+        ax.plot(x_eval, y_model, '-', color=colors[i], 
+                label=f"{win} m window")
+    # figure formatting
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.legend(loc='lower left', title='Legend')
+    ax.grid(True)
+    fig.suptitle(title)
+    plt.savefig(pathfig, dpi=500)
+    plt.close()
+    
 
-        ###pathfig=os.path.join(path_figures, "q3_rmse_dist.png")
-        
+    # (6) use cross-validation to determine the optimum window size that minimizes RMSE
 
-        ###fig, ax = plt.subplots(2, 5, 
-        ###                    tight_layout=True, sharex=True,
-        ###                    #sharey=True,
-        ###                    figsize=[10,3])
-        ###fig.suptitle("RMSE Values for Polynomial Models using 1000 Cross-Validation Tests",
-        ###            fontsize=14)
 
-        #### create horizontal boxplot for each dataset
-        ###colors = plt.cm.rainbow(np.linspace(0, 1, len(deg_list)))
-        ###for i, deg in enumerate(deg_list):
-        ###    axb = ax.reshape(-1)[i]
-        ###    axb.boxplot(rmse_vals[deg], vert=False)
-        ###    axb.set_yticks([1], [])
-        ###    axb.set_title(f"Degree {deg}")
 
-        ###    axh = ax.reshape(-1)[i+len(deg_list)]
-        ###    utils_plot.plot_relative_density_hist(rmse_vals[deg], bins=10, 
-        ###                                        ax=axh, color=colors[i], title=None)
-        ###    axh.set_xlabel('RMSE')
-        ###ax[1,0].set_ylabel('Density')
-        ####ax[0,0].set_title('Depths 1\nBoxplot')
 
-        ###plt.savefig(pathfig, dpi=500, bbox_inches='tight')
-        ###plt.close()
 
-        # (4) moving window average
-        #TODO currently in points not m
-        win_list = [3, 10, 50] # m
-        utils_plot.plot_moving_avg(data[:,0], data[:,1], win_list, 
-                                   'Depth [$m$]', 'Velocity [$m/yr$]', 
-                                   'Glacier Velocity vs Depth, with Moving Average',
-                                   os.path.join(path_figures, "q4_moving_avg.png"))
-        
+    # (7) 
+    return    
+    
+
+
+def nonsense():
+    # (4) moving window average
+    #TODO currently in points not m
+
+    # now use cross-validataion to fit model on 90% and evaluate on 10% of data
+    # use x_eval as x_test (10%) and compare to test velocities
+    # use RMSE to determine best window size (display RMSE for various window sizes)
+        # maybe use a histogram to display these results (eg win size from 2-200 and avg RMSE for each)
 
     # (6) use cross validation
 
@@ -163,7 +184,7 @@ def cross_validataion_rmse(data, perc_train, n_iters, deg_list):
         rmse_vals   : np array  : Size len(deg_list) by n_iters
     '''
     # initialize array to store RMSE values for each degree polyfit
-    rmse_vals = pd.DataFrame(columns=deg_list)
+    rmse_vals = pd.DataFrame(columns=[f"Degree {deg}" for deg in deg_list])
 
     for deg in deg_list:
         deg_rmse = []
@@ -180,8 +201,12 @@ def cross_validataion_rmse(data, perc_train, n_iters, deg_list):
             # save individual RMSE
             deg_rmse.append(rmse)
         # save list of RMSE
-        rmse_vals[deg] = deg_rmse
+        rmse_vals[f"Degree {deg}"] = deg_rmse
     return rmse_vals
+
+
+
+
 
 def get_train_test(data, perc_train):
     #TODO fix docs anc comment
@@ -218,4 +243,4 @@ def format_mc_stats(mc_stats):
 
 
 if __name__ =="__main__":
-    main(debug=True)
+    main()
