@@ -26,16 +26,21 @@ The dataset, `icevelocity.txt`, is a series of measurements of velocity (in m/yr
 
 ## (D) Non-Parametric Statistical Models
 
-4. 
+4. I calculated a moving average for window lenghts of 3, 10, and 50 m. These are plotted with the data in the figure below. The smallest moving window (3 m) appears to overfit the data, going through most data points, while the largest moving window (50 m) is very smooth, and captures the general trend but not much more. 
 
 ![Moving Average](figures/q4_moving_avg.png)
 
-5. 
+5. I then calculated a moving window average with weights from the bi-squared kernel. Once again, I used 3, 10, and 50 m window lengths. The weighted average appears to give a slightly smoother model than the unweighted average.
 
 ![Weighted Moving Average](figures/q5_weighted_moving_avg.png)
 
-6. Optimum window size
+6. To find the optimum window size for this data, I used a cross-validation approach to calculate a weighted moving window average model from 90% of the data, and then applied the model to the remaining 10% of the data and calculated the RMSE. I tested window sizes between 3 and 50 m, and computed the RMSE for 1000 different iterations for each window size. 
 
+    Below, I have plotted the mean RMSE for 1000 iterations of each window size. The model that minimizes the RMSE is the optimum window size. The minimum value is highlighted in red, which in this case is a window size of 24 m.
+
+    During this process, a few figures were created, and the minimum RMSE value was always between 20-30 m.
+
+![Cross-Validataion for Weighted Moving Average](figures/q6_crossval_weighted_moving_avg.png)
 
 ## (E) Theoretical Ice Flow Model
 
