@@ -1,6 +1,6 @@
 # GEOPH 522: HW 3
-* Author: Madeline Hunt
-* Date: 25 Oct 2024
+Author: Madeline Hunt
+Date: 25 Oct 2024
 
 ## (A) Code Overview
 Code for this homework is in `main.py`, with utility functions in `utils.py` and `utils_plot.py`. Figures are stored in the `/figures` subdirectory.
@@ -71,21 +71,10 @@ As we can see from the plot, there is a wide range of *A* values, including some
 
 ![Brute Force and Gradient Descent Results](figures/q11_comp_methods.png)
 
-12.
+12. I used the numpy `random.normal()` function to generate 1000 random samples from a normal distribution with the mean and standard deviation of the values found from the Monte Carlo simulation in question (10). I did this for both the *A* parameter and the calculated RMSE. 
 
-13.
+13. I then performed a 2 sample K-S test with the actual values found from the simulation in question (10) and from the normal distributions created in question (12). The null hypothesis for this test is that the samples were drawn from the same distribution; that is, the results of the Monte Carlo simulation gave were normally distributed. 
 
+    However, my results from this test were **a p-value of 1e-55 for the *A* distribution and a p-value of 10e-18 for the RMSE distribution**. Since these p-values are extremely, low, we reject the null hypothesis; these values were *not* drawn from a normal distribution.
 
-    Reject the null hypothesis; these values were *not* drawn from a normal distribution
-
-
-
-
-    # first col is depth (z), second col is velocity (v)    
-    # holes drilled every 2 m, inclinometer in each hole and freeze over, 
-    #   watch column/hole deform over time
-    #   can tell how velocity of glacier changes with depth
-    #   fastest vel at surface, decrease towards bed; slip at the bed, so x-intercept is non-zero
-    #   want to fit data to predict velocity everywhere
-    #   fit polynomial velocity model v_m(z) = A0 + A1z + A2z^2 + ... + Anz^n
-    #       fit different polynomial degrees
+    I think this is due to the nature of the gradient descent method, especially because the value of the A parameter is so low, that I may have run into issues with machine precision.

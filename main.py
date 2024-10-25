@@ -16,86 +16,86 @@ def main():
     path_figures = os.path.join(path_home, 'figures')
     data = np.loadtxt(os.path.join(path_home, "icevelocity.txt"))
 
-    ## (1) fit polynomials deg 0-4 to data and plot
-    #deg_list = np.arange(0, 5, 1)
-    #utils_plot.plot_polyfit(data[:,0], data[:,1], deg_list, 
-    #                'Depth [$m$]', 'Velocity [$m/yr$]', 
-    #                'Glacier Velocity vs Depth, with Polynomial Models',
-    #                os.path.join(path_figures, "q1_polynomial_fits.png"))
+    # (1) fit polynomials deg 0-4 to data and plot
+    deg_list = np.arange(0, 5, 1)
+    utils_plot.plot_polyfit(data[:,0], data[:,1], deg_list, 
+                    'Depth [$m$]', 'Velocity [$m/yr$]', 
+                    'Glacier Velocity vs Depth, with Polynomial Models',
+                    os.path.join(path_figures, "q1_polynomial_fits.png"))
 
-    ## (2) monte carlo with 90% of the data
-    #n_samp = int(np.ceil(0.9 * len(data)))
-    #mc_stats = utils.monte_carlo_polyfit(data, n_samp=n_samp, n_iters=1000, deg_list=deg_list)
-    ## format output dataframe for plotting
-    #mc_stats = format_mc_stats(mc_stats)
-    ## plot dataframe as table
-    #utils_plot.plot_df_as_table(mc_stats, 
-    #                            title="Model Parameters for Monte Carlo Sampling of 90\\% of Data", 
-    #                            pathfig=os.path.join(path_figures, "q2_param_table.png"))
+    # (2) monte carlo with 90% of the data
+    n_samp = int(np.ceil(0.9 * len(data)))
+    mc_stats = utils.monte_carlo_polyfit(data, n_samp=n_samp, n_iters=1000, deg_list=deg_list)
+    # format output dataframe for plotting
+    mc_stats = format_mc_stats(mc_stats)
+    # plot dataframe as table
+    utils_plot.plot_df_as_table(mc_stats, 
+                                title="Model Parameters for Monte Carlo Sampling of 90\\% of Data", 
+                                pathfig=os.path.join(path_figures, "q2_param_table.png"))
 
-    ## (3) cross-validation with 90% of data
-    #rmse_vals = cross_validataion_rmse(data, 
-    #                                   perc_train=0.9, 
-    #                                   n_iters=1000, 
-    #                                   deg_list=deg_list)
-    ## plot distribution of RMSE vals for each degree
-    #utils_plot.plot_hist_subplots(rmse_vals, bins=10, 
-    #                              title="Cross-Validataion: Distribution of RMSE Values for Polynomial Models", 
-    #                              x_label="RMSE", 
-    #                              pathfig=os.path.join(path_figures, "q3_rmse_dist.png"))
+    # (3) cross-validation with 90% of data
+    rmse_vals = cross_validataion_rmse(data, 
+                                       perc_train=0.9, 
+                                       n_iters=1000, 
+                                       deg_list=deg_list)
+    # plot distribution of RMSE vals for each degree
+    utils_plot.plot_hist_subplots(rmse_vals, bins=10, 
+                                  title="Cross-Validataion: Distribution of RMSE Values for Polynomial Models", 
+                                  x_label="RMSE", 
+                                  pathfig=os.path.join(path_figures, "q3_rmse_dist.png"))
     
-    ## (4) use a moving window average to model the data
-    #win_list = [3, 10, 50]
-    ##TODO CHECK ME
-    #utils_plot.plot_moving_avg(data[:,0], data[:,1], win_list, 
-    #                            'Depth [$m$]', 'Velocity [$m/yr$]', 
-    #                            'Unweighted Moving Average, Velocity vs Depth',
-    #                            os.path.join(path_figures, "q4_moving_avg.png"))
+    # (4) use a moving window average to model the data
+    win_list = [3, 10, 50]
+    #TODO CHECK ME
+    utils_plot.plot_moving_avg(data[:,0], data[:,1], win_list, 
+                                'Depth [$m$]', 'Velocity [$m/yr$]', 
+                                'Unweighted Moving Average, Velocity vs Depth',
+                                os.path.join(path_figures, "q4_moving_avg.png"))
     
-    ## (5) use a weighted moving window average to model the data
-    #xlabel = "Depth [$m$]"
-    #ylabel = "Velocity [$m/yr$]"
-    #title = "Weighted Moving Average, Velocity vs Depth"
-    #pathfig = os.path.join(path_figures, "q5_weighted_moving_avg.png")
-    #x_eval = np.arange(0, np.max(data[:,0]), 0.5)
-    ##mov_avg_weighted = pd.DataFrame(index=x_eval,
-    #                                #columns=[f"Window {win}" for win in win_list])
-    ## initialize figure
-    #fig, ax = plt.subplots(1, 1, tight_layout=True)
-    #ax.plot(data[:,0], data[:,1], 'k.')
-    #colors = plt.cm.rainbow(np.linspace(0, 1, len(win_list)))
-    ## loop through different windows
-    #for i, win in enumerate(win_list):
-    #    y_model = utils.moving_avg_weighted(data[:,0], data[:,1],
-    #                                        x_eval=x_eval, win=win)
-    #    # plot model
-    #    ax.plot(x_eval, y_model, '-', color=colors[i], 
-    #            label=f"{win} m window")
-    ## figure formatting
-    #ax.set_xlabel(xlabel)
-    #ax.set_ylabel(ylabel)
-    #ax.legend(loc='lower left', title='Legend')
-    #ax.grid(True)
-    #fig.suptitle(title)
-    #plt.savefig(pathfig)
-    #plt.close()
+    # (5) use a weighted moving window average to model the data
+    xlabel = "Depth [$m$]"
+    ylabel = "Velocity [$m/yr$]"
+    title = "Weighted Moving Average, Velocity vs Depth"
+    pathfig = os.path.join(path_figures, "q5_weighted_moving_avg.png")
+    x_eval = np.arange(0, np.max(data[:,0]), 0.5)
+    #mov_avg_weighted = pd.DataFrame(index=x_eval,
+                                    #columns=[f"Window {win}" for win in win_list])
+    # initialize figure
+    fig, ax = plt.subplots(1, 1, tight_layout=True)
+    ax.plot(data[:,0], data[:,1], 'k.')
+    colors = plt.cm.rainbow(np.linspace(0, 1, len(win_list)))
+    # loop through different windows
+    for i, win in enumerate(win_list):
+        y_model = utils.moving_avg_weighted(data[:,0], data[:,1],
+                                            x_eval=x_eval, win=win)
+        # plot model
+        ax.plot(x_eval, y_model, '-', color=colors[i], 
+                label=f"{win} m window")
+    # figure formatting
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.legend(loc='lower left', title='Legend')
+    ax.grid(True)
+    fig.suptitle(title)
+    plt.savefig(pathfig)
+    plt.close()
 
-    ## (6) use cross-validation to determine the optimum window size that minimizes RMSE
-    #win_list = np.arange(start=3, stop=50, step=1)
-    #rmse_vals = cross_validataion_moving_window(data, 
-    #                                            perc_train=0.9, 
-    #                                            n_iters=1000, 
-    #                                            win_list=win_list)
-    #fig, ax = plt.subplots(1, 1, tight_layout=True)
-    #ax.plot(win_list, rmse_vals.mean(axis=0), 'o-', color='k')
-    #ax.plot(rmse_vals.mean(axis=0).idxmin(), rmse_vals.mean(axis=0).min(), 
-    #        'o', color='red', markersize=10)
-    #ax.set_xlabel("Window Length [$m$]")
-    #ax.set_ylabel("Mean RMSE Value")
-    #fig.suptitle("Mean RMSE Values for 1000 Iterations vs Weighted Moving Window Size")
-    #pathfig = os.path.join(path_figures, "q6_crossval_weighted_moving_avg.png")
-    #plt.savefig(pathfig)
-    #plt.close()
+    # (6) use cross-validation to determine the optimum window size that minimizes RMSE
+    win_list = np.arange(start=3, stop=50, step=1)
+    rmse_vals = cross_validataion_moving_window(data, 
+                                                perc_train=0.9, 
+                                                n_iters=1000, 
+                                                win_list=win_list)
+    fig, ax = plt.subplots(1, 1, tight_layout=True)
+    ax.plot(win_list, rmse_vals.mean(axis=0), 'o-', color='k')
+    ax.plot(rmse_vals.mean(axis=0).idxmin(), rmse_vals.mean(axis=0).min(), 
+            'o', color='red', markersize=10)
+    ax.set_xlabel("Window Length [$m$]")
+    ax.set_ylabel("Mean RMSE Value")
+    fig.suptitle("Mean RMSE Values for 1000 Iterations vs Weighted Moving Window Size")
+    pathfig = os.path.join(path_figures, "q6_crossval_weighted_moving_avg.png")
+    plt.savefig(pathfig)
+    plt.close()
 
     # (7) use brute-force method to find optimum values of parameters A and n
     v0 = data[0,1]      # m/s
