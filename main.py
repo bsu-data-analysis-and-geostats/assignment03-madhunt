@@ -3,6 +3,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import scipy as sci
 
 import utils
 import utils_plot
@@ -79,107 +80,197 @@ def main():
     #plt.savefig(pathfig)
     #plt.close()
 
-    # (6) use cross-validation to determine the optimum window size that minimizes RMSE
-    win_list = np.arange(start=3, stop=50, step=1)
-    rmse_vals = cross_validataion_moving_window(data, 
-                                                perc_train=0.9, 
-                                                n_iters=1000, 
-                                                win_list=win_list)
-    fig, ax = plt.subplots(1, 1, tight_layout=True)
-    ax.plot(win_list, rmse_vals.mean(axis=0), 'o-', color='k')
-    ax.plot(rmse_vals.mean(axis=0).idxmin(), rmse_vals.mean(axis=0).min(), 
-            'o', color='red', markersize=10)
-    ax.set_xlabel("Window Length [$m$]")
-    ax.set_ylabel("Mean RMSE Value")
-    fig.suptitle("Mean RMSE Values for 1000 Iterations vs Weighted Moving Window Size")
-    pathfig = os.path.join(path_figures, "q6_crossval_weighted_moving_avg.png")
+    ## (6) use cross-validation to determine the optimum window size that minimizes RMSE
+    #win_list = np.arange(start=3, stop=50, step=1)
+    #rmse_vals = cross_validataion_moving_window(data, 
+    #                                            perc_train=0.9, 
+    #                                            n_iters=1000, 
+    #                                            win_list=win_list)
+    #fig, ax = plt.subplots(1, 1, tight_layout=True)
+    #ax.plot(win_list, rmse_vals.mean(axis=0), 'o-', color='k')
+    #ax.plot(rmse_vals.mean(axis=0).idxmin(), rmse_vals.mean(axis=0).min(), 
+    #        'o', color='red', markersize=10)
+    #ax.set_xlabel("Window Length [$m$]")
+    #ax.set_ylabel("Mean RMSE Value")
+    #fig.suptitle("Mean RMSE Values for 1000 Iterations vs Weighted Moving Window Size")
+    #pathfig = os.path.join(path_figures, "q6_crossval_weighted_moving_avg.png")
+    #plt.savefig(pathfig)
+    #plt.close()
+
+    # (7) use brute-force method to find optimum values of parameters A and n
+    v0 = data[0,1]      # m/s
+    rho = 917           # kg/m3
+    grav = 9.8          # m/s2
+    theta = 10          # deg slope
+
+    A_range = np.arange(start=1e-18, stop=10e-18, step=1e-18)
+    n_range = np.arange(start=2, stop=4, step=0.01)
+    # initialize arrays
+    rmse_bruteforce = np.zeros([len(A_range), len(n_range)])
+    for i in range(len(A_range)):
+        for j in range(len(n_range)):
+            # find value of model at all depths for current param values
+            y_model = v0 - A_range[i] * (rho * grav * np.sin(np.deg2rad(theta)))**n_range[j] * data[:,0]**(n_range[j]+1) 
+            rmse_bruteforce[i, j] = utils.root_mean_square_error(model=y_model,
+                                                      measurements=data[:,1])
+
+    ## (8) plot RMSE for values of A and n as colormap
+    #fig, ax = plt.subplots(1, 1, tight_layout=True)
+    #im = ax.imshow(rmse, 
+    #          extent=[min(n), max(n), min(A), max(A)],
+    #            # set aspect to automatically adjust
+    #          aspect='auto',
+    #          origin='lower',
+    #          cmap='bone',
+    #          vmin=0, vmax=20)
+    #fig.colorbar(im, label="RMSE", orientation='vertical')
+    #ax.set_xlabel("Parameter $n$")
+    #ax.set_ylabel("Parameter $A$")
+    #fig.suptitle("Brute Force Method: Optimal Values for Flow Parameters")
+    #pathfig = os.path.join(path_figures, "q8_crossval_brute_force.png")
+    #plt.savefig(pathfig)
+    #plt.close()
+
+    # (9) use the gradient descent method to find optimal values of A and n
+    # choose initial guess from brute force results
+    init_guess = [5e-18, 3]
+    result = sci.optimize.minimize(cost_function_gradient_descent, 
+                                   x0=init_guess,
+                                   args=(data))
+    [B, n] = result.x
+    # chose slightly different cost function to manage precision
+    A = B / ( (rho * grav * np.sin(np.deg2rad(theta)))**n ) 
+
+    print("(9) Gradient Descent")
+    print("\tOptimal n = ", n)
+    print("\tOptimal A = ", A)
+
+    # (10) gradient descent method with cross-validation approach using n=3
+    rmse_vals, A_vals = cross_validataion_gradient_descent(data, 
+                                                   perc_train=0.9, 
+                                                   n_iters=1000)
+    # plot distribution of A and RMSE vals
+    fig, ax = plt.subplots(nrows=1, ncols=2, tight_layout=True)
+    utils_plot.plot_relative_density_hist(rmse_vals, bins=30, 
+                                          ax=ax[0], color='blue', 
+                                          title="Values of RMSE")
+    utils_plot.plot_relative_density_hist(A_vals, bins=30, 
+                                          ax=ax[1], color='red', 
+                                          title="Values of Parameter $A$")
+    fig.suptitle("Distribution of Cross-Validataion on Gradient Descent Method")
+    pathfig = os.path.join(path_figures, "q10_crossval_rmse_A_dist.png")
     plt.savefig(pathfig)
     plt.close()
 
-    print(rmse_vals)
+    # (11) plot mean optimal A with errorbars as stdev
+    A_mean = np.mean(A_vals)
+    A_std = np.std(A_vals)
+    rmse_mean = np.mean(rmse_vals)
+    rmse_std = np.std(rmse_vals)
 
-
-
-
-
-    # (7) 
-    return    
-    
-
-
-def nonsense():
-    # 2024-10-03 in class
-    # (7) brute force approach
-    #FIXME we need to use the correct variable names according to the HW here
-    ns = len(velocity)
-    A0 = np.arange(20, 150, 1)
-    A1 = np.arange(-1, 0.5, 0.005)
-    # initialize arrays
-    rmse = np.zeros([len(A0), len(A1)])
-    for n in range(len(A0)):
-        for n2 in range(len(A1)):
-            # find value of model at all depths for current param values
-            v_model = A0[n] + A1[n2]*depth
-            rmse[n,n2] = utils.root_mean_square_error(model=v_model,
-                                                measurements=velocity)
-    # now plot as a heatmap
     fig, ax = plt.subplots(1, 1, tight_layout=True)
-    ax.imshow(rmse, 
-              extent=[min(A1), max(A1), min(A0), max(A0)],
+    im = ax.imshow(rmse_bruteforce, 
+              extent=[min(n_range), max(n_range), min(A_range), max(A_range)],
                 # set aspect to automatically adjust
               aspect='auto',
               origin='lower',
-              cmap='viridis',
+              cmap='bone',
               vmin=0, vmax=20)
-    #ax.colorbar(label='RMSE')
-    ax.set_title('RMSE values for linear model')
-    # plot polyfit result which should be at center of bowl
-    # only did this for deg 1 in class
-    #ax.plot(p[0], p[1], 'ro', linewidth=2, label='polyfit result')
-    #plt.show()
+    ax.vlines(3, ymin=A_mean-A_std, ymax=A_mean+A_std, colors='orange',
+              linewidth=3)
+    ax.plot(3, A_mean, 'r*', markersize=15, label="Gradient Descent, Cross-Validation")
+    ax.plot(n, A, 'b*', markersize=15, label="Gradient Descent, All Data")
+    fig.colorbar(im, label="RMSE", orientation='vertical')
+    ax.legend(loc='upper right')
+    ax.set_xlabel("Parameter $n$")
+    ax.set_ylabel("Parameter $A$")
+    fig.suptitle("Brute Force Method: Optimal Values for Flow Parameters")
+    pathfig = os.path.join(path_figures, "q11_comp_methods.png")
+    plt.savefig(pathfig)
+    plt.close()
 
-    # (9) gradient descent
-    from scipy.optimize import minimize
-    # define objective/cost function
-    def rmse_val(P):
-        data = np.loadtxt(os.path.join(path_home, "icevelocity.txt"))
-        z = data[:,0]
-        v = data[:,1]
-        vmodel = P[0]*z + P[1]
-        rmse = np.sqrt(np.mean((vmodel-v)**2))
-        return rmse
-    # well behave func with only one min, so initial guess shouldnt matter
-    # this method is much faster
-    # can use timeit
-    init_guess = [-1, 20]
-    result = minimize(rmse_val, init_guess)
-    pbest = result.x
+    # (12) create normal distributions from A and RMSE values
+    A_norm_dist = np.random.normal(loc=A_mean, scale=A_std, size=1000)
+    rmse_norm_dist = np.random.normal(loc=rmse_mean, scale=rmse_std, size=1000)
 
-    ax.plot(pbest[0], pbest[1], 'wx', markersize=5, label='gradient descent')
+    # (13) compare actual distributions with normal distribution
+    result = sci.stats.ks_2samp(A_vals, A_norm_dist)
+    pval_A_dist = result.pvalue
+    result = sci.stats.ks_2samp(rmse_vals, rmse_norm_dist)
+    pval_rmse_dist = result.pvalue
 
-    #plt.show()
-
-
-
-    z = depth
-    v = velocity
-    zsum = np.sum(z)
-    z2sum = np.sum(z**2)
-    M = np.array([[zsum, len(z)], [z2sum, zsum]])
-    vsum = np.sum(v)
-    vzsum = np.sum(z*v)
-    y = np.array([vsum, vzsum])
-    pbest2 = np.linalg.solve(M, y)
-
-    ax.plot(pbest2[0], pbest2[1], 'k^', markersize=5, label='analytic')
-    plt.legend()
-    plt.show()
-    
-        
-        
-
+    print("(13) 2 Sample K-S Test")
+    print("\tA Distribution P-Value = ", pval_A_dist)
+    print("\tRMSE Distribution P-Value = ", pval_rmse_dist)
 
     return
+
+
+
+
+def cost_function_gradient_descent(params, data):
+    B = params[0]
+    n = params[1]
+    y_model = data[0,1] - B * data[:,0]**(n+1)
+    rmse = utils.root_mean_square_error(model=y_model,
+                                        measurements=data[:,1])
+    return rmse
+def cost_function_n3(params, data):
+    B = params
+    n = 3
+    y_model = data[0,1] - B * data[:,0]**(n+1)
+    rmse = utils.root_mean_square_error(model=y_model,
+                                        measurements=data[:,1])
+    return rmse
+
+def theoretical_model_params():
+    rho = 917           # kg/m3
+    grav = 9.8          # m/s2
+    theta = 10          # deg slope
+    return rho, grav, theta
+
+def theoretical_model(data, A, n):
+    rho, grav, theta = theoretical_model_params()
+    y_model = data[0,1] - A * (rho * grav * np.sin(np.deg2rad(theta)))**n * data[:,0]**(n+1)
+    return y_model
+
+
+def cross_validataion_gradient_descent(data, perc_train, n_iters):
+    # use a power of n=3
+    n = 3
+    # initialize array to store RMSE values
+    rmse_vals = []
+    A_vals = []
+    # perform cross-validataion 
+    for i in range(n_iters):
+        # choose sample of training data from entire dataset
+        data_train, data_test = get_train_test(data, perc_train=perc_train)
+
+        # find optimal parameters with training data
+        result = sci.optimize.minimize(cost_function_n3, 
+                                       x0=1e-8, 
+                                       args=(data_train))
+        B = result.x[0]
+        # calculate A parameter
+        rho, grav, theta = theoretical_model_params()
+        A = B / ( (rho * grav * np.sin(np.deg2rad(theta)))**n ) 
+        A_vals.append(A)
+
+        # fit theoretical model to test data
+        y_model = theoretical_model(data_test, A, n)
+        # calculate and save RMSE
+        rmse = utils.root_mean_square_error(y_model, data_test[:,1])
+        rmse_vals.append(rmse)
+    
+    rmse_vals = np.array(rmse_vals)
+    A_vals = np.array(A_vals)
+    rmse_vals[np.isinf(rmse_vals)] = np.nan
+    A_vals[np.isinf(A_vals)] = np.nan
+
+    return rmse_vals, A_vals
+
+
+
 def cross_validataion_moving_window(data, perc_train, n_iters, win_list):
     '''
         rmse_vals   : np array  : Size len(deg_list) by n_iters

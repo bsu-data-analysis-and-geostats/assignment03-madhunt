@@ -38,19 +38,46 @@ The dataset, `icevelocity.txt`, is a series of measurements of velocity (in m/yr
 
     Below, I have plotted the mean RMSE for 1000 iterations of each window size. The model that minimizes the RMSE is the optimum window size. The minimum value is highlighted in red, which in this case is a window size of 24 m.
 
-    During this process, a few figures were created, and the minimum RMSE value was always between 20-30 m.
+    During this process, a few figures were created, and the minimum RMSE value always corresponded with a **window length between 20-30 m**.
 
 ![Cross-Validataion for Weighted Moving Average](figures/q6_crossval_weighted_moving_avg.png)
 
 ## (E) Theoretical Ice Flow Model
 
-7. 
-8. 
-9.
-10. 
-11. 
+7. I used the brute force method to find optimum values for the parameters *A* and *n*. I calculated the RMSE for each model with *A* ranging from 1e-18 to 10e-18, and *n* from 2 to 4.
+
+8. I plotted the RMSE as a colormap for each theoretical model with the parameters from question 7. The combination of *A* and *n* that minimize the RMSE are the optimal values.
+
+In the figure below, we can see that there are a *range* of optimal values of *A* and *n*, as shown by the black band running through the center of the figure. **Optimal values are for an *A* across the entire range, with an *n* between 3-3.25.**
+
+![Brute Force Method](figures/q8_crossval_brute_force.png)
+
+9. Next, I used the gradient search method to find optimal values of *A* and *n*. I chose an initial guess for each parameter from the results of the brute force method. By minimizing the cost function, which is the RMSE, I found optimal parameter values of: ***A* = 4.09e-18 and *n* = 3.01**.
+
+10. I used a cross-validation method to randomly sample 90% of the dataset, find the optimal value of *A* with gradient descent, and calculate the RMSE with the remaining 10% of the data. I repeated this 1000 times. Additionally, I set *n=3* for this section, as instructed, and just found optimal values of *A*.
+
+Below is a plot of the results of these 1000 iterations, showing the distribution of RMSE and optimal values for *A*.
+
+As we can see from the plot, there is a wide range of *A* values, including some near -2e-18. These could be errors due to managing the precision of values internally within the gradient descent function. 
+
+![Distribution of Gradient Descent Results](figures/q10_crossval_rmse_A_dist.png)
+
+
+11. I added the mean value of *A* (as calculated in the distribution, above) to the figure from question (8), and added vertical errorbars using the standard deviation.
+
+    As seen in the figure below, the error bars are very large, and the optimal value for *A* is not within the optimal region calcualted by the brute force method. Since there were so many outliers seen in the distribution, above, the median might be a better statistic to use than the mean here. 
+
+    The optimal value for *A* and *n* calculated in question (9) are also marked with a blue star.
+
+![Brute Force and Gradient Descent Results](figures/q11_comp_methods.png)
+
 12.
+
 13.
+
+
+    Reject the null hypothesis; these values were *not* drawn from a normal distribution
+
 
 
 
