@@ -4,13 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import scipy as sci
-
+# import additional files
 import utils
-import utils_plot
-
 
 def main():
-
     # (0) load in data
     path_home = os.path.dirname(os.path.realpath(__file__))
     path_figures = os.path.join(path_home, 'figures')
@@ -18,7 +15,7 @@ def main():
 
     # (1) fit polynomials deg 0-4 to data and plot
     deg_list = np.arange(0, 5, 1)
-    utils_plot.plot_polyfit(data[:,0], data[:,1], deg_list, 
+    utils.plot_polyfit(data[:,0], data[:,1], deg_list, 
                     'Depth [$m$]', 'Velocity [$m/yr$]', 
                     'Glacier Velocity vs Depth, with Polynomial Models',
                     os.path.join(path_figures, "q1_polynomial_fits.png"))
@@ -29,37 +26,30 @@ def main():
     # format output dataframe for plotting
     mc_stats = format_mc_stats(mc_stats)
     # plot dataframe as table
-    utils_plot.plot_df_as_table(mc_stats, 
+    utils.plot_df_as_table(mc_stats, 
                                 title="Model Parameters for Monte Carlo Sampling of 90\\% of Data", 
                                 pathfig=os.path.join(path_figures, "q2_param_table.png"))
 
     # (3) cross-validation with 90% of data
-    rmse_vals = cross_validataion_rmse(data, 
+    rmse_vals = cross_validatation_polyfit(data, 
                                        perc_train=0.9, 
                                        n_iters=1000, 
                                        deg_list=deg_list)
     # plot distribution of RMSE vals for each degree
-    utils_plot.plot_hist_subplots(rmse_vals, bins=10, 
+    utils.plot_hist_subplots(rmse_vals, bins=10, 
                                   title="Cross-Validataion: Distribution of RMSE Values for Polynomial Models", 
                                   x_label="RMSE", 
                                   pathfig=os.path.join(path_figures, "q3_rmse_dist.png"))
     
     # (4) use a moving window average to model the data
     win_list = [3, 10, 50]
-    #TODO CHECK ME
-    utils_plot.plot_moving_avg(data[:,0], data[:,1], win_list, 
+    utils.plot_moving_avg(data[:,0], data[:,1], win_list, 
                                 'Depth [$m$]', 'Velocity [$m/yr$]', 
                                 'Unweighted Moving Average, Velocity vs Depth',
                                 os.path.join(path_figures, "q4_moving_avg.png"))
     
     # (5) use a weighted moving window average to model the data
-    xlabel = "Depth [$m$]"
-    ylabel = "Velocity [$m/yr$]"
-    title = "Weighted Moving Average, Velocity vs Depth"
-    pathfig = os.path.join(path_figures, "q5_weighted_moving_avg.png")
     x_eval = np.arange(0, np.max(data[:,0]), 0.5)
-    #mov_avg_weighted = pd.DataFrame(index=x_eval,
-                                    #columns=[f"Window {win}" for win in win_list])
     # initialize figure
     fig, ax = plt.subplots(1, 1, tight_layout=True)
     ax.plot(data[:,0], data[:,1], 'k.')
@@ -72,12 +62,12 @@ def main():
         ax.plot(x_eval, y_model, '-', color=colors[i], 
                 label=f"{win} m window")
     # figure formatting
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
+    ax.set_xlabel("Depth [$m$]")
+    ax.set_ylabel("Velocity [$m/yr$]")
     ax.legend(loc='lower left', title='Legend')
     ax.grid(True)
-    fig.suptitle(title)
-    plt.savefig(pathfig)
+    fig.suptitle("Weighted Moving Average, Velocity vs Depth")
+    plt.savefig(os.path.join(path_figures, "q5_weighted_moving_avg.png"))
     plt.close()
 
     # (6) use cross-validation to determine the optimum window size that minimizes RMSE
@@ -93,16 +83,10 @@ def main():
     ax.set_xlabel("Window Length [$m$]")
     ax.set_ylabel("Mean RMSE Value")
     fig.suptitle("Mean RMSE Values for 1000 Iterations vs Weighted Moving Window Size")
-    pathfig = os.path.join(path_figures, "q6_crossval_weighted_moving_avg.png")
-    plt.savefig(pathfig)
+    plt.savefig(os.path.join(path_figures, "q6_crossval_weighted_moving_avg.png"))
     plt.close()
 
     # (7) use brute-force method to find optimum values of parameters A and n
-    v0 = data[0,1]      # m/s
-    rho = 917           # kg/m3
-    grav = 9.8          # m/s2
-    theta = 10          # deg slope
-
     A_range = np.arange(start=1e-18, stop=10e-18, step=1e-18)
     n_range = np.arange(start=2, stop=4, step=0.01)
     # initialize arrays
@@ -110,26 +94,26 @@ def main():
     for i in range(len(A_range)):
         for j in range(len(n_range)):
             # find value of model at all depths for current param values
-            y_model = v0 - A_range[i] * (rho * grav * np.sin(np.deg2rad(theta)))**n_range[j] * data[:,0]**(n_range[j]+1) 
+            y_model = theoretical_model(data, A_range[i], n_range[j])
             rmse_bruteforce[i, j] = utils.root_mean_square_error(model=y_model,
                                                       measurements=data[:,1])
 
-    ## (8) plot RMSE for values of A and n as colormap
-    #fig, ax = plt.subplots(1, 1, tight_layout=True)
-    #im = ax.imshow(rmse, 
-    #          extent=[min(n), max(n), min(A), max(A)],
-    #            # set aspect to automatically adjust
-    #          aspect='auto',
-    #          origin='lower',
-    #          cmap='bone',
-    #          vmin=0, vmax=20)
-    #fig.colorbar(im, label="RMSE", orientation='vertical')
-    #ax.set_xlabel("Parameter $n$")
-    #ax.set_ylabel("Parameter $A$")
-    #fig.suptitle("Brute Force Method: Optimal Values for Flow Parameters")
-    #pathfig = os.path.join(path_figures, "q8_crossval_brute_force.png")
-    #plt.savefig(pathfig)
-    #plt.close()
+    # (8) plot RMSE for values of A and n as colormap
+    fig, ax = plt.subplots(1, 1, tight_layout=True)
+    im = ax.imshow(rmse_bruteforce, 
+              extent=[min(n_range), max(n_range), min(A_range), max(A_range)],
+                # set aspect to automatically adjust
+              aspect='auto',
+              origin='lower',
+              cmap='bone',
+              vmin=0, vmax=20)
+    fig.colorbar(im, label="RMSE", orientation='vertical')
+    ax.set_xlabel("Parameter $n$")
+    ax.set_ylabel("Parameter $A$")
+    fig.suptitle("Brute Force Method: Optimal Values for Flow Parameters")
+    pathfig = os.path.join(path_figures, "q8_crossval_brute_force.png")
+    plt.savefig(pathfig)
+    plt.close()
 
     # (9) use the gradient descent method to find optimal values of A and n
     # choose initial guess from brute force results
@@ -139,8 +123,9 @@ def main():
                                    args=(data))
     [B, n] = result.x
     # chose slightly different cost function to manage precision
+    rho, grav, theta = theoretical_model_params()
     A = B / ( (rho * grav * np.sin(np.deg2rad(theta)))**n ) 
-
+    # print results
     print("(9) Gradient Descent")
     print("\tOptimal n = ", n)
     print("\tOptimal A = ", A)
@@ -151,10 +136,10 @@ def main():
                                                    n_iters=1000)
     # plot distribution of A and RMSE vals
     fig, ax = plt.subplots(nrows=1, ncols=2, tight_layout=True)
-    utils_plot.plot_relative_density_hist(rmse_vals, bins=30, 
+    utils.plot_relative_density_hist(rmse_vals, bins=30, 
                                           ax=ax[0], color='blue', 
                                           title="Values of RMSE")
-    utils_plot.plot_relative_density_hist(A_vals, bins=30, 
+    utils.plot_relative_density_hist(A_vals, bins=30, 
                                           ax=ax[1], color='red', 
                                           title="Values of Parameter $A$")
     fig.suptitle("Distribution of Cross-Validataion on Gradient Descent Method")
@@ -167,11 +152,10 @@ def main():
     A_std = np.std(A_vals)
     rmse_mean = np.mean(rmse_vals)
     rmse_std = np.std(rmse_vals)
-
+    # modify figure from question (8)
     fig, ax = plt.subplots(1, 1, tight_layout=True)
     im = ax.imshow(rmse_bruteforce, 
               extent=[min(n_range), max(n_range), min(A_range), max(A_range)],
-                # set aspect to automatically adjust
               aspect='auto',
               origin='lower',
               cmap='bone',
@@ -198,24 +182,39 @@ def main():
     pval_A_dist = result.pvalue
     result = sci.stats.ks_2samp(rmse_vals, rmse_norm_dist)
     pval_rmse_dist = result.pvalue
-
+    # print result
     print("(13) 2 Sample K-S Test")
     print("\tA Distribution P-Value = ", pval_A_dist)
     print("\tRMSE Distribution P-Value = ", pval_rmse_dist)
-
     return
 
 
-
-
 def cost_function_gradient_descent(params, data):
+    '''
+    Cost function for gradient descent is RMSE
+    INPUTS
+        params  : list, 2x1 : Parameters [B, n]
+        data    : np array  : Data to model with theoretical model
+    RETURNS
+        rmse    : np array  : RMSE of model compared with data.
+    '''
     B = params[0]
     n = params[1]
     y_model = data[0,1] - B * data[:,0]**(n+1)
     rmse = utils.root_mean_square_error(model=y_model,
                                         measurements=data[:,1])
     return rmse
+
+
 def cost_function_n3(params, data):
+    '''
+    Slightly-modified cost function with parameter set to 3.
+    INPUTS
+        params  : float     : Parameter B
+        data    : np array  : Data to model with theoretical model
+    RETURNS
+        rmse    : np array  : RMSE of model compared with data.
+    '''
     B = params
     n = 3
     y_model = data[0,1] - B * data[:,0]**(n+1)
@@ -223,19 +222,41 @@ def cost_function_n3(params, data):
                                         measurements=data[:,1])
     return rmse
 
+
 def theoretical_model_params():
+    ''' Parameters to use in theoretical model.  '''
     rho = 917           # kg/m3
     grav = 9.8          # m/s2
     theta = 10          # deg slope
     return rho, grav, theta
 
+
 def theoretical_model(data, A, n):
+    '''
+    Theoretical ice flow model.
+    INPUTS
+        data    : np array  : Data to calculate model for
+        A       : float     : Flow parameter A
+        n       : float     : Flow parameter n
+    RETURNS
+        y_model : np array  : Model calculated for input x-data
+    '''
     rho, grav, theta = theoretical_model_params()
     y_model = data[0,1] - A * (rho * grav * np.sin(np.deg2rad(theta)))**n * data[:,0]**(n+1)
     return y_model
 
 
 def cross_validataion_gradient_descent(data, perc_train, n_iters):
+    '''
+    Cross-validation function for gradient descent method with n=3.
+    INPUTS
+        data        : np array  : Entire dataset
+        perc_train  : float     : Fraction (between 0-1) of data to use as training data
+        n_iters     : int       : Number of iterations
+    RETURNS
+        rmse_vals   : np array  : RMSE calculated for each simulation
+        A_vals      : np array  : Flow parameter A calculated for each simulation
+    '''
     # use a power of n=3
     n = 3
     # initialize array to store RMSE values
@@ -270,10 +291,16 @@ def cross_validataion_gradient_descent(data, perc_train, n_iters):
     return rmse_vals, A_vals
 
 
-
 def cross_validataion_moving_window(data, perc_train, n_iters, win_list):
     '''
-        rmse_vals   : np array  : Size len(deg_list) by n_iters
+    Cross-validation function for moving window average.
+    INPUTS
+        data        : np array  : Entire dataset
+        perc_train  : float     : Fraction (between 0-1) of data to use as training data
+        n_iters     : int       : Number of iterations
+        win_list    : list      : List of int of window sizes to test.
+    RETURNS
+        rmse_vals   : pandas    : RMSE calculated for each simulation for each window length.
     '''
     # initialize array to store RMSE values for each window length
     rmse_vals = pd.DataFrame(columns=[win for win in win_list])
@@ -296,11 +323,16 @@ def cross_validataion_moving_window(data, perc_train, n_iters, win_list):
         rmse_vals[win] = win_rmse
     return rmse_vals
 
-def cross_validataion_rmse(data, perc_train, n_iters, deg_list):
+def cross_validatation_polyfit(data, perc_train, n_iters, deg_list):
     '''
-
-
-        rmse_vals   : np array  : Size len(deg_list) by n_iters
+    Cross-validation function for polyfit with various degrees.
+    INPUTS
+        data        : np array  : Entire dataset
+        perc_train  : float     : Fraction (between 0-1) of data to use as training data
+        n_iters     : int       : Number of iterations
+        deg_list    : list      : List of int of polynomial degrees to test.
+    RETURNS
+        rmse_vals   : pandas    : RMSE calculated for each simulation for each degree polynomial.
     '''
     # initialize array to store RMSE values for each degree polyfit
     rmse_vals = pd.DataFrame(columns=[f"Degree {deg}" for deg in deg_list])
@@ -324,17 +356,15 @@ def cross_validataion_rmse(data, perc_train, n_iters, deg_list):
     return rmse_vals
 
 
-
-
-
 def get_train_test(data, perc_train):
-    #TODO fix docs anc comment
     '''
     Divides data into randomly-sampled training and test subsets.
     INPUTS
-        data    : np array  : 
-        perc_train : float     : Between 0 and 1
+        data        : np array  : Entire dataset.
+        perc_train  : float     : Fraction (between 0-1) of data to use as training data.
     RETURNS
+        data_train  : np array  : Training data
+        data_test   : np array  : Testing data
     '''
     n, _ = np.shape(data)
 
@@ -346,11 +376,13 @@ def get_train_test(data, perc_train):
 
     data_test = data[[i for i in range(n) if i not in idx_train]]
 
-
     return data_train, data_test
 
 
 def format_mc_stats(mc_stats):
+    '''
+    Formats the mc_stats dataframe in order to save as a plot.
+    '''
     mc_stats.index = "Degree "+mc_stats.index.astype(str)
     mc_stats[['A0 Mean', 'A1 Mean', 'A2 Mean', 'A3 Mean', 'A4 Mean']] = pd.DataFrame(mc_stats['Param Mean'].tolist(), index= mc_stats.index)
     mc_stats[['A0 Stdev','A1 Stdev', 'A2 Stdev', 'A3 Stdev', 'A4 Stdev']] = pd.DataFrame(mc_stats['Param Stdev'].tolist(), index= mc_stats.index)
@@ -358,7 +390,6 @@ def format_mc_stats(mc_stats):
     mc_stats = mc_stats.astype(float).round(3)
     mc_stats = mc_stats.transpose()
     return mc_stats
-
 
 
 if __name__ =="__main__":

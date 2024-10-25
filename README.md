@@ -3,7 +3,7 @@ Author: Madeline Hunt
 Date: 25 Oct 2024
 
 ## (A) Code Overview
-Code for this homework is in `main.py`, with utility functions in `utils.py` and `utils_plot.py`. Figures are stored in the `/figures` subdirectory.
+Code for this homework is in `main.py`, with utility and plotting functions in `utils.py`. Figures are stored in the `/figures` subdirectory.
 
 The dataset, `icevelocity.txt`, is a series of measurements of velocity (in m/yr) at varying depths (in m) in the Worthington Glacier, Alaska. 
 
